@@ -2,7 +2,7 @@
 name = "alice-audit"
 version = "1.0.0"
 edition = "2021"
-authors = ["Moroya Sakamoto"]
+authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
 description = "Audit trail system with hash-chain tamper detection, compliance reporting, and retention policies"
 license = "AGPL-3.0"
 
