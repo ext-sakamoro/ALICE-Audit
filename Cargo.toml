@@ -1,6 +1,6 @@
 [package]
 name = "alice-audit"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
 description = "Audit trail with hash-chain tamper detection, SHA-256 + Ed25519 signed events, and Merkle root anchoring"

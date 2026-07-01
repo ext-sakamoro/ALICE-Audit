@@ -11,7 +11,10 @@
 //! left untouched so downstream code keeps working.
 
 use crate::{Actor, Resource, Severity};
-use alice_blockchain::{hash_data, Hash, KeyPair, MerkleProof, MerkleTree, PublicKey, Signature};
+use alice_blockchain::{
+    hash_data, Hash, KeyPair, MerkleProof, MerkleTree, PublicKey, Signature, VerifiableCredential,
+    VerifiableCredentialBuilder,
+};
 use std::collections::BTreeMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -305,6 +308,39 @@ impl SignedAuditTrail {
     pub const fn is_empty(&self) -> bool {
         self.events.is_empty()
     }
+
+    /// Export the event at `index` as a W3C `VerifiableCredential 2.0` under
+    /// the supplied issuer identity.
+    ///
+    /// The credential subject is set to the event's actor id, and the
+    /// payload hash is the event's `content_hash`. The credential is signed
+    /// with `issuer_key` (which may or may not be the original event signer,
+    /// depending on the SPACID role model).
+    ///
+    /// Returns `None` when `index` is out of range.
+    #[must_use]
+    pub fn export_vc(
+        &self,
+        index: usize,
+        vc_id: impl Into<String>,
+        issuer_did: impl Into<String>,
+        issuer_key: &KeyPair,
+    ) -> Option<VerifiableCredential> {
+        let event = self.events.get(index)?;
+        let subject_did = format!("did:actor:{}", event.actor.id);
+        let clamped = event.timestamp_unix_ns.min(u128::from(u64::MAX));
+        let secs = u64::try_from(clamped).unwrap_or(u64::MAX) / 1_000_000_000;
+        Some(
+            VerifiableCredentialBuilder::new(
+                vc_id,
+                issuer_did,
+                subject_did,
+                event.content_hash,
+                secs,
+            )
+            .build_signed(issuer_key),
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -522,6 +558,38 @@ mod tests {
             None,
         );
         assert!(trail.verify_signatures());
+    }
+
+    #[test]
+    fn export_vc_produces_verifiable_credential() {
+        let issuer = KeyPair::from_seed([2u8; 32]);
+        let mut trail = SignedAuditTrail::new();
+        trail.append_at(
+            Severity::Info,
+            actor(),
+            resource(),
+            "read",
+            "opened file",
+            BTreeMap::new(),
+            at(1_720_000_000),
+            None,
+        );
+        let vc = trail
+            .export_vc(0, "urn:spacid:vc:trail-0", "did:example:spacid", &issuer)
+            .expect("in range");
+        assert!(vc.verify());
+        assert!(vc.verify_by(&issuer.public()));
+        let json = vc.to_json();
+        assert!(json.contains("did:actor:u-001"));
+    }
+
+    #[test]
+    fn export_vc_out_of_range_returns_none() {
+        let issuer = KeyPair::from_seed([3u8; 32]);
+        let trail = SignedAuditTrail::new();
+        assert!(trail
+            .export_vc(0, "urn:x", "did:example:issuer", &issuer)
+            .is_none());
     }
 
     #[test]
