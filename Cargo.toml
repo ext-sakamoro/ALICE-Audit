@@ -1,10 +1,13 @@
 [package]
 name = "alice-audit"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
-description = "Audit trail system with hash-chain tamper detection, compliance reporting, and retention policies"
+description = "Audit trail with hash-chain tamper detection, SHA-256 + Ed25519 signed events, and Merkle root anchoring"
 license = "AGPL-3.0"
 
 [lib]
 crate-type = ["rlib"]
+
+[dependencies]
+alice-blockchain = { path = "../ALICE-Blockchain" }

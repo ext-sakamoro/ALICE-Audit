@@ -1,13 +1,22 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(clippy::module_name_repetitions, clippy::too_many_arguments)]
 
-//! ALICE-Audit: Audit trail system with hash-chain tamper detection,
-//! compliance reporting, retention policies, and audit queries.
+//! ALICE-Audit: Audit trail with hash-chain tamper detection, compliance
+//! reporting, retention policies, and cryptographically signed events.
+//!
+//! - The legacy [`AuditTrail`] uses `u64` `DefaultHasher` hash-chaining for
+//!   fast tamper detection and remains unchanged for backward compatibility.
+//! - The new [`SignedAuditTrail`] adds `SHA-256` content hashes, optional
+//!   `Ed25519` signatures per event, and Merkle root computation for
+//!   anchoring the trail into an external ledger.
 
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+pub mod signed_trail;
+pub use signed_trail::{SignedAuditEvent, SignedAuditTrail};
 
 // ---------------------------------------------------------------------------
 // Severity
