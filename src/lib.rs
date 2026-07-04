@@ -16,6 +16,7 @@ use std::hash::{Hash, Hasher};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub mod gdpr;
+pub mod prelude;
 pub mod signed_trail;
 pub use gdpr::{
     DataSubjectRequest, DataSubjectRequestKind, GdprRegister, LawfulBasis, ProcessingRecord,
