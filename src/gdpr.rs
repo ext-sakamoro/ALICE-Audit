@@ -9,7 +9,7 @@
 //!   with a lifecycle status.
 //!
 //! Records are content-agnostic; sign or anchor them via
-//! [`crate::SignedAuditTrail`] to prove that the log has not been
+//! [`crate::signed_trail::SignedAuditTrail`] to prove that the log has not been
 //! tampered with after the fact.
 
 use std::collections::HashSet;
