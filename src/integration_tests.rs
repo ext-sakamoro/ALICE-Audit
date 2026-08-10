@@ -8,9 +8,7 @@
 )]
 
 use crate::actor::*;
-use crate::event::*;
 use crate::query::*;
-use crate::report::*;
 use crate::retention::*;
 use crate::severity::*;
 use crate::trail::*;
@@ -18,8 +16,6 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-use super::*;
 
 fn make_actor(id: &str) -> Actor {
     Actor::new(id, &format!("Actor {id}"), "user")
