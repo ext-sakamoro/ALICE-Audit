@@ -1,0 +1,37 @@
+[package]
+name = "alice-audit-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[package.metadata.cargo-machete]
+# arbitrary is used via #[derive(Arbitrary)] which machete may miss
+ignored = ["arbitrary"]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+
+[dependencies.alice-audit]
+path = ".."
+
+[[bin]]
+name = "fuzz_log_entry_parse"
+path = "fuzz_targets/fuzz_log_entry_parse.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_query_filter"
+path = "fuzz_targets/fuzz_query_filter.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_hash_chain_verify"
+path = "fuzz_targets/fuzz_hash_chain_verify.rs"
+doc = false
+
+[workspace]
+members = ["."]
