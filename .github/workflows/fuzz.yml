@@ -66,8 +66,10 @@ jobs:
         with:
           workspaces: fuzz
 
-      - name: Create ALICE optional bridge stubs
-        uses: ./.github/actions/alice-stubs
+      - name: Checkout ALICE-* siblings (real crates)
+        uses: ./.github/actions/alice-siblings
+        with:
+          eco-token: ${{ secrets.ALICE_ECO_TOKEN }}
 
       - name: Install cargo-fuzz
         run: cargo install cargo-fuzz --locked

@@ -1,0 +1,47 @@
+name: 'ALICE-Audit Sibling Checkout'
+description: |
+  Clone the real `alice-blockchain` sibling (private repo, mandatory path dep
+  `../ALICE-Blockchain` used unconditionally by `src/signed_trail.rs`) next to
+  this checkout so that every job (test / clippy / doc / audit / deny / machete /
+  coverage / semver / fuzz) compiles and audits the real dependency graph.
+
+  Replaces the "rich stub" (fake `alice-blockchain` API, never cryptographically
+  valid) that was used until 2026-09-15 — canonical 罠 #21: a stub that fakes an
+  unconditionally used API is not a stub, it is a fake test double in CI
+  ([[reference_alice_ci_canonical_template]]).
+
+  Layout: the sibling is cloned to `$GITHUB_WORKSPACE/../ALICE-Blockchain`
+  (the parent of this checkout), which is exactly where the path dep points,
+  so callers keep the single-repo layout (no `path:` / `working-directory`).
+
+  Canonical CI template: [[reference_alice_ci_canonical_template]]
+
+inputs:
+  eco-token:
+    description: |
+      Fine-grained PAT (Contents: Read-only) covering ext-sakamoro/ALICE-Blockchain
+      — pass `secrets.ALICE_ECO_TOKEN`. The default GITHUB_TOKEN cannot read
+      other private repos; a missing secret fails the clone loudly instead of
+      producing a fake graph.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Clone ALICE-Blockchain (real sibling, private)
+      shell: bash
+      env:
+        ECO_TOKEN: ${{ inputs.eco-token }}
+      run: |
+        set -euo pipefail
+        if [ -z "${ECO_TOKEN}" ]; then
+          echo "::error::ALICE_ECO_TOKEN secret is empty — register it on this repo (Contents: Read on ALICE-Blockchain)"
+          exit 1
+        fi
+        dest="$(cd "${GITHUB_WORKSPACE}/.." && pwd)/ALICE-Blockchain"
+        rm -rf "${dest}"
+        # actions/checkout と同じ basic auth header (token は URL / .git/config に残さない)
+        auth="$(printf 'x-access-token:%s' "${ECO_TOKEN}" | base64 | tr -d '\n')"
+        git -c http.extraheader="AUTHORIZATION: basic ${auth}" clone --depth 1 \
+          "https://github.com/ext-sakamoro/ALICE-Blockchain.git" "${dest}"
+        echo "alice-blockchain $(grep -m1 '^version' "${dest}/Cargo.toml") @ $(git -C "${dest}" rev-parse --short HEAD)"
