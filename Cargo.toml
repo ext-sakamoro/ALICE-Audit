@@ -10,4 +10,7 @@ license = "AGPL-3.0 OR LicenseRef-Commercial"
 crate-type = ["rlib"]
 
 [dependencies]
-alice-blockchain = { path = "../ALICE-Blockchain" }
+# `version` は publish に必須 (path だけだと `cargo package` が
+# "all dependencies must have a version requirement specified when packaging" で落ちる)
+# publish 時は `path` が外れて version 要求だけが残るので、値は相手の実 version に合わせる
+alice-blockchain = { version = "1.5", path = "../ALICE-Blockchain" }
