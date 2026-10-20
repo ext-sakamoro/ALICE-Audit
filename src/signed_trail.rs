@@ -315,7 +315,7 @@ impl SignedAuditTrail {
     /// The credential subject is set to the event's actor id, and the
     /// payload hash is the event's `content_hash`. The credential is signed
     /// with `issuer_key` (which may or may not be the original event signer,
-    /// depending on the SPACID role model).
+    /// depending on the deployment's role model).
     ///
     /// Returns `None` when `index` is out of range.
     #[must_use]
@@ -512,10 +512,10 @@ mod tests {
 
         let mut meta_a = BTreeMap::new();
         meta_a.insert("zone".into(), "kitchen".into());
-        meta_a.insert("app".into(), "spacid".into());
+        meta_a.insert("app".into(), "example".into());
         let mut meta_b = BTreeMap::new();
         // Insert in different order to confirm BTreeMap normalises.
-        meta_b.insert("app".into(), "spacid".into());
+        meta_b.insert("app".into(), "example".into());
         meta_b.insert("zone".into(), "kitchen".into());
 
         trail_a.append_at(
@@ -575,7 +575,7 @@ mod tests {
             None,
         );
         let vc = trail
-            .export_vc(0, "urn:spacid:vc:trail-0", "did:example:spacid", &issuer)
+            .export_vc(0, "urn:example:vc:trail-0", "did:example:issuer", &issuer)
             .expect("in range");
         assert!(vc.verify());
         assert!(vc.verify_by(&issuer.public()));
