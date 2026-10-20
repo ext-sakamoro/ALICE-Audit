@@ -119,7 +119,7 @@ fn log_critical_sets_severity() {
 fn log_event_with_metadata() {
     let mut trail = AuditTrail::new();
     let mut meta = HashMap::new();
-    meta.insert("ip".to_owned(), "192.168.1.1".to_owned());
+    meta.insert("ip".to_owned(), "203.0.113.7".to_owned());
     meta.insert("session".to_owned(), "abc123".to_owned());
     trail.log_event(
         Severity::Info,
@@ -130,7 +130,7 @@ fn log_event_with_metadata() {
         meta,
     );
     assert_eq!(trail.events()[0].metadata.len(), 2);
-    assert_eq!(trail.events()[0].metadata["ip"], "192.168.1.1");
+    assert_eq!(trail.events()[0].metadata["ip"], "203.0.113.7");
 }
 
 #[test]

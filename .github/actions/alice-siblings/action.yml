@@ -6,15 +6,13 @@ description: |
   coverage / semver / fuzz) compiles and audits the real dependency graph.
 
   Replaces the "rich stub" (fake `alice-blockchain` API, never cryptographically
-  valid) that was used until 2026-09-15 — canonical 罠 #21: a stub that fakes an
-  unconditionally used API is not a stub, it is a fake test double in CI
-  ([[reference_alice_ci_canonical_template]]).
+  valid) that was used until 2026-09-15: a stub that fakes an unconditionally
+  used API is not a stub, it is a fake test double in CI.
 
   Layout: the sibling is cloned to `$GITHUB_WORKSPACE/../ALICE-Blockchain`
   (the parent of this checkout), which is exactly where the path dep points,
   so callers keep the single-repo layout (no `path:` / `working-directory`).
 
-  Canonical CI template: [[reference_alice_ci_canonical_template]]
 
 inputs:
   eco-token:

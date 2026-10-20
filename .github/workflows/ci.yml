@@ -1,10 +1,9 @@
 name: CI
 
-# canonical CI template: [[reference_alice_ci_canonical_template]] 手順 4.5
 # 2026-09-15 強化 (それまで fmt + actionlint のみで test / clippy / doc は CI 未実行):
 # - test / clippy `--all-targets` (pedantic は 0 件なので最初から `-D warnings` gate) / doc `-D warnings`
 # - mandatory path dep alice-blockchain (private) は alice-siblings action で real clone
-#   (それまでの "rich stub" = fake API は罠 #21、`secrets.ALICE_ECO_TOKEN` 必須)
+#   (それまでの "rich stub" は偽の API だった、`secrets.ALICE_ECO_TOKEN` 必須)
 # - feature 0 なので powerset 不要、no_std claim なし
 
 on:
