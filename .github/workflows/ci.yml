@@ -2,13 +2,12 @@ name: CI
 
 # 2026-09-15 強化 (それまで fmt + actionlint のみで test / clippy / doc は CI 未実行):
 # - test / clippy `--all-targets` (pedantic は 0 件なので最初から `-D warnings` gate) / doc `-D warnings`
-# - mandatory path dep alice-blockchain (private) は alice-siblings action で real clone
-#   (それまでの "rich stub" は偽の API だった、`secrets.ALICE_ECO_TOKEN` 必須)
+# - path 依存は無い (Ed25519 / SHA-256 / Merkle / 資格証明は公開の alice-sign を git rev で引く)
 # - feature 0 なので powerset 不要、no_std claim なし
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'ci/**']
   pull_request:
     branches: [main]
 
@@ -22,10 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Checkout ALICE-* siblings (real crates)
-        uses: ./.github/actions/alice-siblings
-        with:
-          eco-token: ${{ secrets.ALICE_ECO_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Test
@@ -36,10 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Checkout ALICE-* siblings (real crates)
-        uses: ./.github/actions/alice-siblings
-        with:
-          eco-token: ${{ secrets.ALICE_ECO_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -63,10 +54,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Checkout ALICE-* siblings (real crates)
-        uses: ./.github/actions/alice-siblings
-        with:
-          eco-token: ${{ secrets.ALICE_ECO_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Doc
@@ -84,3 +71,37 @@ jobs:
         with:
           fail_level: error
           reporter: github-check
+
+  test-public-siblings:
+    name: Test (public siblings)
+    runs-on: ubuntu-latest
+    env:
+      # the passed-test count of the feature set below at the commit that set it;
+      # fewer passed tests (a removed or skipped test, or none at all) is a failure
+      MIN_PASSED: "126"
+    steps:
+      # cargo reads the manifest of every path dependency, optional ones included, so
+      # each sibling is checked out next to this repository at a fixed commit with the
+      # workflow's own token: a sibling that is not public cannot be checked out
+      - uses: actions/checkout@v5
+        with:
+          path: ALICE-Audit
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test (lib, integration, doctests)
+        working-directory: ALICE-Audit
+        run: |
+          # the default shell has no pipefail: without it cargo's exit status is lost in the pipe
+          set -o pipefail
+          log="$(mktemp)"
+          cargo test --all-features 2>&1 | tee "${log}"
+          passed=$(grep -E '^test result: ' "${log}" | awk '{s += $4} END {print s + 0}')
+          failed=$(grep -E '^test result: ' "${log}" | awk '{s += $6} END {print s + 0}')
+          echo "passed: ${passed} (minimum ${MIN_PASSED}), failed: ${failed}"
+          if [ "${failed}" -ne 0 ] || grep -E '^test result: ' "${log}" | grep -vE '^test result: ok\. ' >/dev/null; then
+            echo "::error::${failed} tests failed"
+            exit 1
+          fi
+          if [ "${passed}" -lt "${MIN_PASSED}" ]; then
+            echo "::error::${passed} tests passed, fewer than ${MIN_PASSED}"
+            exit 1
+          fi

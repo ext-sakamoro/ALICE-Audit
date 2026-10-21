@@ -4,8 +4,6 @@
 # ALICE-Physics の deny.toml を base に ALICE-Audit 用に調整
 #
 # ALICE-Audit 自体は AGPL-3.0 だが、target crate なので self-exception で許可
-# sibling stubs (alice-blockchain) は alice-stubs action で
-# "MIT OR Apache-2.0" で生成される
 
 [graph]
 all-features = false
