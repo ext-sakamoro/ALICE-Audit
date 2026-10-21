@@ -11,10 +11,10 @@
 //! left untouched so downstream code keeps working.
 
 use crate::{Actor, Resource, Severity};
-use alice_blockchain::vc::VcError;
+use alice_sign::vc::VcError;
 #[cfg(test)]
-use alice_blockchain::vc::MAX_ISSUANCE_UNIX_SECONDS;
-use alice_blockchain::{
+use alice_sign::vc::MAX_ISSUANCE_UNIX_SECONDS;
+use alice_sign::{
     hash_data, Hash, KeyPair, MerkleProof, MerkleTree, PublicKey, Signature, VerifiableCredential,
     VerifiableCredentialBuilder,
 };
@@ -277,8 +277,7 @@ impl SignedAuditTrail {
     }
 
     /// Build a Merkle tree over all events' content hashes.  The returned
-    /// root is suitable for anchoring into an external ledger (e.g.
-    /// [`alice_blockchain::Blockchain`]).
+    /// root is suitable for anchoring into an external ledger.
     #[must_use]
     pub fn merkle_tree(&self) -> Option<MerkleTree> {
         if self.events.is_empty() {

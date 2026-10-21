@@ -6,24 +6,15 @@ version = 4
 name = "alice-audit"
 version = "1.3.0"
 dependencies = [
- "alice-blockchain",
-]
-
-[[package]]
-name = "alice-blockchain"
-version = "3.0.0"
-dependencies = [
  "alice-sign",
- "sha2",
 ]
 
 [[package]]
 name = "alice-sign"
 version = "0.1.0"
-source = "git+https://github.com/ext-sakamoro/ALICE-Sign?rev=5420e71fbbf47dd1202b6abcb3c885ef3aa176ca#5420e71fbbf47dd1202b6abcb3c885ef3aa176ca"
+source = "git+https://github.com/ext-sakamoro/ALICE-Sign?rev=6b79a0bad3db4c7de1719251d6a2a9405fbc0ee2#6b79a0bad3db4c7de1719251d6a2a9405fbc0ee2"
 dependencies = [
  "ed25519-dalek",
- "rand_core",
  "sha2",
 ]
 
@@ -115,7 +106,6 @@ checksum = "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
- "rand_core",
  "sha2",
  "subtle",
  "zeroize",
@@ -160,12 +150,6 @@ checksum = "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
 dependencies = [
  "proc-macro2",
 ]
-
-[[package]]
-name = "rand_core"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 
 [[package]]
 name = "rustc_version"
