@@ -11,10 +11,14 @@
 //! left untouched so downstream code keeps working.
 
 use crate::{Actor, Resource, Severity};
+use alice_blockchain::vc::VcError;
+#[cfg(test)]
+use alice_blockchain::vc::MAX_ISSUANCE_UNIX_SECONDS;
 use alice_blockchain::{
     hash_data, Hash, KeyPair, MerkleProof, MerkleTree, PublicKey, Signature, VerifiableCredential,
     VerifiableCredentialBuilder,
 };
+use core::fmt;
 use std::collections::BTreeMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -317,29 +321,74 @@ impl SignedAuditTrail {
     /// with `issuer_key` (which may or may not be the original event signer,
     /// depending on the deployment's role model).
     ///
-    /// Returns `None` when `index` is out of range.
-    #[must_use]
+    /// # Errors
+    ///
+    /// [`ExportVcError::IndexOutOfRange`] when there is no event at `index`;
+    /// [`ExportVcError::Vc`] when the credential cannot be issued (the event
+    /// time is past the last date a credential can carry,
+    /// `9999-12-31T23:59:59Z`). Nothing is signed on an error.
     pub fn export_vc(
         &self,
         index: usize,
         vc_id: impl Into<String>,
         issuer_did: impl Into<String>,
         issuer_key: &KeyPair,
-    ) -> Option<VerifiableCredential> {
-        let event = self.events.get(index)?;
+    ) -> Result<VerifiableCredential, ExportVcError> {
+        let event = self
+            .events
+            .get(index)
+            .ok_or(ExportVcError::IndexOutOfRange {
+                index,
+                len: self.events.len(),
+            })?;
         let subject_did = format!("did:actor:{}", event.actor.id);
-        let clamped = event.timestamp_unix_ns.min(u128::from(u64::MAX));
-        let secs = u64::try_from(clamped).unwrap_or(u64::MAX) / 1_000_000_000;
-        Some(
-            VerifiableCredentialBuilder::new(
-                vc_id,
-                issuer_did,
-                subject_did,
-                event.content_hash,
-                secs,
-            )
-            .build_signed(issuer_key),
+        // whole seconds of the event time; a time whose seconds do not fit u64 is
+        // past any date a credential can carry, and the builder refuses it
+        let secs = u64::try_from(event.timestamp_unix_ns / 1_000_000_000).unwrap_or(u64::MAX);
+        Ok(VerifiableCredentialBuilder::new(
+            vc_id,
+            issuer_did,
+            subject_did,
+            event.content_hash,
+            secs,
         )
+        .build_signed(issuer_key)?)
+    }
+}
+
+/// Why [`SignedAuditTrail::export_vc`] produced no credential.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ExportVcError {
+    /// There is no event at `index` (the trail has `len` events).
+    IndexOutOfRange { index: usize, len: usize },
+    /// The credential could not be issued.
+    Vc(VcError),
+}
+
+impl fmt::Display for ExportVcError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::IndexOutOfRange { index, len } => {
+                write!(f, "no event at index {index} (the trail has {len})")
+            }
+            Self::Vc(e) => write!(f, "{e}"),
+        }
+    }
+}
+
+impl std::error::Error for ExportVcError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::IndexOutOfRange { .. } => None,
+            Self::Vc(e) => Some(e),
+        }
+    }
+}
+
+impl From<VcError> for ExportVcError {
+    fn from(e: VcError) -> Self {
+        Self::Vc(e)
     }
 }
 
@@ -579,16 +628,108 @@ mod tests {
             .expect("in range");
         assert!(vc.verify());
         assert!(vc.verify_by(&issuer.public()));
-        let json = vc.to_json();
+        let json = vc.to_json().expect("in range");
         assert!(json.contains("did:actor:u-001"));
     }
 
     #[test]
-    fn export_vc_out_of_range_returns_none() {
+    fn export_vc_out_of_range_index_is_an_error() {
         let issuer = KeyPair::from_seed([3u8; 32]);
         let trail = SignedAuditTrail::new();
-        assert!(trail
+        assert_eq!(
+            trail
+                .export_vc(0, "urn:x", "did:example:issuer", &issuer)
+                .err(),
+            Some(ExportVcError::IndexOutOfRange { index: 0, len: 0 })
+        );
+    }
+
+    fn trail_at(seconds_after_epoch: u64) -> SignedAuditTrail {
+        let mut trail = SignedAuditTrail::new();
+        trail.append_at(
+            Severity::Info,
+            actor(),
+            resource(),
+            "read",
+            "opened file",
+            BTreeMap::new(),
+            at(seconds_after_epoch),
+            None,
+        );
+        trail
+    }
+
+    #[test]
+    fn export_vc_names_the_index_and_the_length() {
+        let issuer = KeyPair::from_seed([3u8; 32]);
+        assert_eq!(
+            trail_at(1_720_000_000)
+                .export_vc(5, "urn:x", "did:example:issuer", &issuer)
+                .err(),
+            Some(ExportVcError::IndexOutOfRange { index: 5, len: 1 })
+        );
+    }
+
+    /// an event time past the last date a credential can carry is an error,
+    /// not a missing event and not a credential with a wrong date
+    #[test]
+    fn export_vc_refuses_an_event_time_past_9999() {
+        let issuer = KeyPair::from_seed([3u8; 32]);
+        let past = MAX_ISSUANCE_UNIX_SECONDS + 1;
+        assert_eq!(
+            trail_at(past)
+                .export_vc(0, "urn:x", "did:example:issuer", &issuer)
+                .err(),
+            Some(ExportVcError::Vc(VcError::TimestampOutOfRange {
+                unix_seconds: past
+            }))
+        );
+    }
+
+    /// a time whose whole seconds do not fit u64 is refused as the latest
+    /// time, never wrapped or cut to an earlier one
+    #[test]
+    fn export_vc_refuses_a_time_whose_seconds_do_not_fit_u64() {
+        let issuer = KeyPair::from_seed([3u8; 32]);
+        let mut trail = trail_at(1_720_000_000);
+        trail.events[0].timestamp_unix_ns = u128::MAX;
+        assert_eq!(
+            trail
+                .export_vc(0, "urn:x", "did:example:issuer", &issuer)
+                .err(),
+            Some(ExportVcError::Vc(VcError::TimestampOutOfRange {
+                unix_seconds: u64::MAX
+            }))
+        );
+    }
+
+    #[test]
+    fn export_vc_accepts_the_last_second_of_9999() {
+        let issuer = KeyPair::from_seed([3u8; 32]);
+        let vc = trail_at(MAX_ISSUANCE_UNIX_SECONDS)
             .export_vc(0, "urn:x", "did:example:issuer", &issuer)
+            .expect("in range");
+        assert!(vc.verify());
+        let json = vc.to_json().expect("in range");
+        assert!(json.contains("9999-12-31T23:59:59Z"), "{json}");
+    }
+
+    #[test]
+    fn the_export_error_describes_itself() {
+        let e = ExportVcError::IndexOutOfRange { index: 3, len: 1 }.to_string();
+        assert!(e.contains('3') && e.contains('1'), "{e}");
+        let e = ExportVcError::Vc(VcError::TimestampOutOfRange { unix_seconds: 7 }).to_string();
+        assert!(e.contains("9999"), "{e}");
+    }
+
+    #[test]
+    fn the_export_error_names_its_cause() {
+        use std::error::Error as _;
+        let vc = VcError::TimestampOutOfRange { unix_seconds: 7 };
+        let cause = ExportVcError::Vc(vc).source().map(ToString::to_string);
+        assert_eq!(cause, Some(vc.to_string()));
+        assert!(ExportVcError::IndexOutOfRange { index: 3, len: 1 }
+            .source()
             .is_none());
     }
 
