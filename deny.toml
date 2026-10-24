@@ -73,7 +73,7 @@ license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
 # license check 対象にするため exception で自己許可
 [[licenses.exceptions]]
 name = "alice-audit"
-allow = ["AGPL-3.0", "AGPL-3.0-only"]
+allow = ["LicenseRef-Proprietary"]
 
 # ---------------------------------------------------------------------------
 # Bans (banned crate / duplicate / wildcard)
