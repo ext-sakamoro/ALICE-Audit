@@ -3,7 +3,7 @@
 #
 # ALICE-Physics の deny.toml を base に ALICE-Audit 用に調整
 #
-# ALICE-Audit 自体は AGPL-3.0 だが、target crate なので self-exception で許可
+# ALICE-Audit 自体は LicenseRef-Proprietary、target crate なので self-exception で許可
 
 [graph]
 all-features = false
@@ -69,7 +69,7 @@ version = "*"
 expression = "ISC"
 license-files = [{ path = "LICENSE", hash = 0x001c7e6c }]
 
-# ALICE-Audit 自身 (target crate) が AGPL-3.0 だが cargo-deny は target も
+# ALICE-Audit 自身 (target crate) は LicenseRef-Proprietary、cargo-deny は target も
 # license check 対象にするため exception で自己許可
 [[licenses.exceptions]]
 name = "alice-audit"
