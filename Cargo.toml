@@ -14,4 +14,4 @@ crate-type = ["rlib"]
 # `version` は publish に必須 (path だけだと `cargo package` が
 # "all dependencies must have a version requirement specified when packaging" で落ちる)
 # publish 時は `path` が外れて version 要求だけが残るので、値は相手の実 version に合わせる
-alice-sign = { version = "0.1", git = "https://github.com/ext-sakamoro/ALICE-Sign", rev = "8a1b00d800082187a8693732a9ffb806c98814e7", features = ["vc"] }
+alice-sign = { version = "0.1.0", git = "https://github.com/ext-sakamoro/ALICE-Sign", branch = "main", features = ["vc"] }
